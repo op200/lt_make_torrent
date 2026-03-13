@@ -1,4 +1,4 @@
-**A CLI app used for make torrent file**
+**A simple CLI app used for make torrent file**
 
 Forked from [libtorrent/examples/make_torrent.cpp](https://github.com/arvidn/libtorrent/blob/RC_2_0/examples/make_torrent.cpp)
 

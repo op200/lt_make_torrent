@@ -1,38 +1,3 @@
-/*
-
-Copyright (c) 2016, Andrei Kurushin
-Copyright (c) 2004, 2008-2013, 2015-2017, 2019-2020, Arvid Norberg
-Copyright (c) 2016, Alden Torres
-Copyright (c) 2017, Steven Siloti
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the distribution.
-    * Neither the name of the author nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-
-*/
-
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/create_torrent.hpp"
 
@@ -45,6 +10,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifdef TORRENT_WINDOWS
 #include <direct.h> // for _getcwd
 #endif
+
+#define VERSION 1.1
 
 namespace {
 
@@ -118,7 +85,9 @@ bool file_filter(std::string const &f) {
 }
 
 [[noreturn]] void print_usage() {
-  std::cerr << R"(usage: make_torrent FILE [OPTIONS]
+  std::cerr << std::format(R"(lt_make_torrent version {}
+
+usage: make_torrent FILE [OPTIONS]
 
 Generates a torrent file from the specified file
 or directory and writes it to standard out
@@ -149,15 +118,54 @@ OPTIONS:
               in the same collection is expected to share files
               with this one.
 -2            Only generate V2 metadata
+-1            Only V1
 -T            Include file timestamps in the .torrent file.
-)";
+)",
+                           VERSION);
   std::exit(1);
 }
 
 } // anonymous namespace
 
+#ifdef TORRENT_WINDOWS
+std::string ansi_to_utf8(const char *ansi_str) {
+  // 1. ANSI → UTF-16（不自动添加 \0）
+  int wlen =
+      MultiByteToWideChar(CP_ACP, 0, ansi_str, strlen(ansi_str), nullptr, 0);
+  std::wstring wstr(wlen, 0);
+  MultiByteToWideChar(CP_ACP, 0, ansi_str, strlen(ansi_str), &wstr[0], wlen);
+
+  // 2. UTF-16 → UTF-8（不自动添加 \0）
+  int ulen = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstr.size(), nullptr,
+                                 0, nullptr, nullptr);
+  std::string utf8_str(ulen, 0);
+  WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstr.size(), &utf8_str[0], ulen,
+                      nullptr, nullptr);
+
+  return utf8_str;
+}
+#endif
+
 int main(int argc_, char const *argv_[]) try {
+#ifdef TORRENT_WINDOWS
+  SetConsoleCP(CP_UTF8);
+  SetConsoleOutputCP(CP_UTF8);
+
+  // 将 ANSI 参数转换为 UTF-8
+  std::vector<std::string> utf8_args;
+  for (int i = 0; i < argc_; ++i)
+    utf8_args.push_back(ansi_to_utf8(argv_[i]));
+
+  // 创建指向 UTF-8 字符串的指针数组
+  std::vector<const char *> utf8_ptrs;
+  for (const auto &arg : utf8_args)
+    utf8_ptrs.push_back(arg.c_str());
+
+  // 使用 UTF-8 参数创建 span
+  lt::span<char const *> args(utf8_ptrs.data(), utf8_ptrs.size());
+#else
   lt::span<char const *> args(argv_, argc_);
+#endif
   std::string creator_str = "libtorrent";
   std::string comment_str;
 
@@ -194,6 +202,9 @@ int main(int argc_, char const *argv_[]) try {
       continue;
     case '2':
       flags |= lt::create_torrent::v2_only;
+      continue;
+    case '1':
+      flags |= lt::create_torrent::v1_only;
       continue;
     case 'T':
       flags |= lt::create_torrent::modification_time;
