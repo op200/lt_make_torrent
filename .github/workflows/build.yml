@@ -28,10 +28,10 @@ jobs:
       - name: Configure CMake
         run: |
           $env:VCPKG_ROOT = "C:\vcpkg\"
-          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja -DCMAKE_CXX_COMPILER=clang-cl
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target all
 
       - name: Create 7z archive
         run: |
