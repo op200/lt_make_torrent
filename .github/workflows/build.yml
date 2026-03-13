@@ -23,7 +23,7 @@ jobs:
       - run: Get-Command vcpkg
 
       - name: set VCPKG_ROOT
-        run: $env:VCPKG_ROOT = "${{github.workspace}}/vcpkg/"
+        run: $env:VCPKG_ROOT = "C:\vcpkg\"
 
       - name: vcpkg install
         run: vcpkg install libtorrent:x64-windows-static --classic
