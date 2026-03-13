@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB DAP",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/lt_make_torrent.exe",
+            // "args": [],
+            // "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build",
+            "console": "integratedTerminal", // 外部终端中运行
+        }
+    ]
+}
